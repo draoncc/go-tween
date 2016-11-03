@@ -3,8 +3,8 @@ package tween_test
 import (
 	"time"
 
-	. "github.com/gopackage/tween"
-	"github.com/gopackage/tween/curves"
+	. "github.com/draoncc/tween"
+	"github.com/draoncc/tween/easing"
 
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
@@ -39,7 +39,7 @@ var _ = Describe("Core", func() {
 		It("should generate frames", func(done Done) {
 			d := make(chan int)
 			recorder := &Recorder{Done: d}
-			engine := NewEngine(time.Second, curves.Linear, recorder)
+			engine := NewEngine(time.Second, easing.Linear, recorder)
 			engine.Start()
 			<-d
 			Ω(recorder.FPS).Should(Equal(60))

@@ -4,9 +4,9 @@ import (
 	"image/color"
 	"time"
 
-	"github.com/gopackage/tween"
-	"github.com/gopackage/tween/curves"
-	. "github.com/gopackage/tween/updaters"
+	"github.com/draoncc/tween"
+	"github.com/draoncc/tween/easing"
+	. "github.com/draoncc/tween/updaters"
 
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
@@ -19,7 +19,7 @@ var _ = Describe("Core", func() {
 			end := color.RGBA{0, 128, 255, 0}
 
 			updater := NewColor(start, end)
-			engine := tween.NewEngine(time.Second, curves.Linear, updater)
+			engine := tween.NewEngine(time.Second, easing.Linear, updater)
 			engine.Start()
 
 			running := true

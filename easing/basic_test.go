@@ -4,8 +4,8 @@ import (
 	"fmt"
 	"os"
 
-	"github.com/gopackage/tween"
-	. "github.com/gopackage/tween/curves"
+	"github.com/draoncc/tween"
+	. "github.com/draoncc/tween/easing"
 
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
@@ -53,38 +53,41 @@ var _ = Describe("Basic Curves", func() {
 			funcs := []FuncInfo{
 				FuncInfo{"Linear", Linear},
 				FuncInfo{"Swing", Swing},
-				FuncInfo{"EaseInQuad", EaseInQuad},
-				FuncInfo{"EaseOutQuad", EaseOutQuad},
-				FuncInfo{"EaseInOutQuad", EaseInOutQuad},
-				FuncInfo{"EaseInCubic", EaseInCubic},
-				FuncInfo{"EaseOutCubic", EaseOutCubic},
-				FuncInfo{"EaseInOutCubic", EaseInOutCubic},
-				FuncInfo{"EaseInQuart", EaseInQuart},
-				FuncInfo{"EaseOutQuart", EaseOutQuart},
-				FuncInfo{"EaseInOutQuart", EaseInOutQuart},
-				FuncInfo{"EaseInQuint", EaseInQuint},
-				FuncInfo{"EaseOutQuint", EaseOutQuint},
-				FuncInfo{"EaseInOutQuint", EaseInOutQuint},
-				FuncInfo{"EaseInExpo", EaseInExpo},
-				FuncInfo{"EaseOutExpo", EaseOutExpo},
-				FuncInfo{"EaseInOutExpo", EaseInOutExpo},
-				FuncInfo{"EaseInSine", EaseInSine},
-				FuncInfo{"EaseOutSine", EaseOutSine},
-				FuncInfo{"EaseInOutSine", EaseInOutSine},
-				FuncInfo{"EaseInCirc", EaseInCirc},
-				FuncInfo{"EaseOutCirc", EaseOutCirc},
-				FuncInfo{"EaseInOutCirc", EaseInOutCirc},
-				FuncInfo{"EaseInElastic", EaseInElastic},
-				FuncInfo{"EaseOutElastic", EaseOutElastic},
-				FuncInfo{"EaseInOutElastic", EaseInOutElastic},
-				FuncInfo{"EaseInBack", EaseInBack},
-				FuncInfo{"EaseOutBack", EaseOutBack},
-				FuncInfo{"EaseInOutBack", EaseInOutBack},
-				FuncInfo{"EaseInBounce", EaseInBounce},
-				FuncInfo{"EaseOutBounce", EaseOutBounce},
-				FuncInfo{"EaseInOutBounce", EaseInOutBounce},
+				FuncInfo{"QuadIn", QuadIn},
+				FuncInfo{"QuadOut", QuadOut},
+				FuncInfo{"QuadInOut", QuadInOut},
+				FuncInfo{"CubicIn", CubicIn},
+				FuncInfo{"CubicOut", CubicOut},
+				FuncInfo{"CubicInOut", CubicInOut},
+				FuncInfo{"QuartIn", QuartIn},
+				FuncInfo{"QuartOut", QuartOut},
+				FuncInfo{"QuartInOut", QuartInOut},
+				FuncInfo{"QuintIn", QuintIn},
+				FuncInfo{"QuintOut", QuintOut},
+				FuncInfo{"QuintInOut", QuintInOut},
+				FuncInfo{"ExpoIn", ExpoIn},
+				FuncInfo{"ExpoOut", ExpoOut},
+				FuncInfo{"ExpoInOut", ExpoInOut},
+				FuncInfo{"SineIn", SineIn},
+				FuncInfo{"SineOut", SineOut},
+				FuncInfo{"SineInOut", SineInOut},
+				FuncInfo{"CircIn", CircIn},
+				FuncInfo{"CircOut", CircOut},
+				FuncInfo{"CircInOut", CircInOut},
+				FuncInfo{"LogIn", LogIn},
+				FuncInfo{"LogOut", LogOut},
+				FuncInfo{"LogInOut", LogInOut},
+				FuncInfo{"ElasticIn", ElasticIn},
+				FuncInfo{"ElasticOut", ElasticOut},
+				FuncInfo{"ElasticInOut", ElasticInOut},
+				FuncInfo{"BackIn", BackIn},
+				FuncInfo{"BackOut", BackOut},
+				FuncInfo{"BackInOut", BackInOut},
+				FuncInfo{"BounceIn", BounceIn},
+				FuncInfo{"BounceOut", BounceOut},
+				FuncInfo{"BounceInOut", BounceInOut},
 			}
-			html, err := os.Create("curves.html")
+			html, err := os.Create("easing.html")
 			Ω(err).Should(BeNil())
 			defer html.Close()
 			html.Write([]byte("<html><head><style>body {margin:1em;}\n.box { position: relative; border: 1px solid #ddd; margin: .5em; display: inline-block; height: 300px; width: 300px; }\n.box h1 { position: absolute; top: 0; left: 10px; font-size: small; font-weight: normal; }</style><title>Curves</title></head><body>"))

@@ -34,7 +34,7 @@ func {{.Name}}In(completed float64) float64 {
 // {{.Name}}Out eases out a {{.Name}} transition.
 // See http://jqueryui.com/easing/ for curve in action.
 func {{.Name}}Out(completed float64) float64 {
-    return 1 - EaseIn{{.Name}}( 1 - completed )
+    return 1 - {{.Name}}In( 1 - completed )
 }
 `,
 	`
@@ -42,9 +42,9 @@ func {{.Name}}Out(completed float64) float64 {
 // See http://jqueryui.com/easing/ for curve in action.
 func {{.Name}}InOut(completed float64) float64 {
     if completed < 0.5 {
-        return EaseIn{{.Name}}( completed * 2 ) / 2
+        return {{.Name}}In( completed * 2 ) / 2
     }
-    return 1 - EaseIn{{.Name}}( (completed * -2) + 2 ) / 2
+    return 1 - {{.Name}}In( (completed * -2) + 2 ) / 2
 }
 `,
 }

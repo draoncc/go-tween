@@ -4,7 +4,7 @@ import (
 	"image/color"
 	"time"
 
-	"github.com/gopackage/tween"
+	"github.com/draoncc/tween"
 )
 
 // NewColor creates a new color updater with the provided colors and
