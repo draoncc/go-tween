@@ -1,4 +1,4 @@
-package curves_test
+package easing_test
 
 import (
 	"testing"

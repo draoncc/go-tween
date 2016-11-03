@@ -1,6 +1,6 @@
 // Package curves adds standard transition curve implementations for
 // the most commonly used tweens.
-package curves
+package easing
 
 import "math"
 

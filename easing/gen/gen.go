@@ -24,23 +24,23 @@ func Must(err error) {
 
 var templates = []string{
 	`
-// EaseIn{{.Name}} eases in a {{.Name}} transition.
+// {{.Name}}In eases in a {{.Name}} transition.
 // See http://jqueryui.com/easing/ for curve in action.
-func EaseIn{{.Name}}(completed float64) float64 {
+func {{.Name}}In(completed float64) float64 {
     {{.Func}}
 }
 `,
 	`
-// EaseOut{{.Name}} eases out a {{.Name}} transition.
+// {{.Name}}Out eases out a {{.Name}} transition.
 // See http://jqueryui.com/easing/ for curve in action.
-func EaseOut{{.Name}}(completed float64) float64 {
+func {{.Name}}Out(completed float64) float64 {
     return 1 - EaseIn{{.Name}}( 1 - completed )
 }
 `,
 	`
-// EaseInOut{{.Name}} eases in and out a {{.Name}} transition.
+// {{.Name}}InOut eases in and out a {{.Name}} transition.
 // See http://jqueryui.com/easing/ for curve in action.
-func EaseInOut{{.Name}}(completed float64) float64 {
+func {{.Name}}InOut(completed float64) float64 {
     if completed < 0.5 {
         return EaseIn{{.Name}}( completed * 2 ) / 2
     }
@@ -56,24 +56,31 @@ func add(name, f string) {
 }
 
 func main() {
-
 	// Basic polynomial curves
 	for i, name := range []string{"Quad", "Cubic", "Quart", "Quint", "Expo"} {
 		p := fmt.Sprintf("return math.Pow(completed, %d)", i+2)
 		inf := &info{name, p}
 		base = append(base, inf)
 	}
+
 	// Sine curve
 	add("Sine", "return 1 - math.Cos( completed * math.Pi / 2 )")
+
 	// Circular (square root) curve
 	add("Circ", "return 1 - math.Sqrt( 1 - completed * completed )")
+
+	// Logarithmic curve
+	add("Log", "return 1 - math.Log((1 - completed) * (math.E - 1) + 1)")
+
 	// Elastic (rubber band) curve
 	add("Elastic", `if completed == 0 || completed == 1 {
             return completed
         }
         return -math.Pow( 2, 8 * ( completed - 1 ) ) * math.Sin( ( ( completed - 1 ) * 80 - 7.5 ) * math.Pi / 15 )`)
+
 	// Back (starts in reverse) curve
 	add("Back", "return completed * completed * ( 3 * completed - 2 )")
+
 	// Bounce (like a rubber ball) curve
 	add("Bounce", `
         bounce := float64(3)
@@ -92,11 +99,11 @@ func main() {
 	// Generate header
 	out := bytes.Buffer{}
 	out.Write([]byte(`
-package curves
+package easing
 
-import ("math")
+import "math"
 
-// Auto-generated file - do not edit directly! See source in curves/gen/gen.go
+// Auto-generated file - do not edit directly! See source in easing/gen/gen.go
 
 `))
 	// Generate functions
@@ -114,7 +121,7 @@ import ("math")
 		}
 		panic(err)
 	}
-	Must(ioutil.WriteFile("ease.go", frmt, os.ModePerm))
+	Must(ioutil.WriteFile("complex.go", frmt, os.ModePerm))
 }
 
 // Based on easing equations from Robert Penner (http://www.robertpenner.com/easing)
