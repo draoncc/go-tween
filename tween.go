@@ -1,6 +1,7 @@
 package tween
 
 import "time"
+import "sync"
 
 // TransitionFunc calculates the percentage of the transition between the start
 // and end values based tween (elapsed time) completion status.
@@ -11,8 +12,8 @@ import "time"
 // linear relationship for the remainder.
 type TransitionFunc func(completed float64) float64
 
-// Updater is the interface for updating the current value as it tweens between
-// start and end values of a Tween.
+// Updater is the interface for updating the current value(s) as it tweens
+// between start and end values of a Tween.
 type Updater interface {
 	// Start signals the beginning of a tween and is sent before the
 	// tweening begins. Start may be used to setup or pre-calculate updates.
@@ -40,27 +41,29 @@ type Frame struct {
 	Elapsed      time.Duration // Elapsed is the current elapsed time in the tween.
 }
 
-// Tween runs a tween relying on transitioner and updater.
+// Tween runs a tween relying on transitioner and updaters.
 type Tween struct {
 	Duration   time.Duration  // The total duration of the tween.
 	Transition TransitionFunc // Transition calculates the transition curve for the tween.
-	Updater    Updater        // Updater updates the tween values for each frame.
 	Framerate  int            // The number of tween data points per second (defaults to 60 fps - like the real gamers use).
 
-	playhead time.Duration // The playhead position
-	reversed bool          // reversed indicates whether playback for this tween has been reversed.
-	running  bool          // True if the tween is running
-	complete bool          // True if the tween has completed
-	stop     chan int      // Internal channel used to terminate the tween early
-	pause    chan int      // Internal channel used to pause the tween while running
+	updaters []Updater      // updaters update the tween values for each frame.
+	playhead time.Duration  // The playhead position
+	reversed bool           // reversed indicates whether playback for this tween has been reversed.
+	running  bool           // True if the tween is running
+	complete bool           // True if the tween has completed
+	stop     chan int       // Internal channel used to terminate the tween early
+	pause    chan int       // Internal channel used to pause the tween while running
+	ulock    sync.Mutex     // To ensure updaters is not written to while iterating through it
+	plock    sync.WaitGroup // To ensure Pause() and Stop() exit only after the tween has paused
 }
 
 // New creates a basic tween with a framerate of 60fps.
-func New(duration time.Duration, transition TransitionFunc, updater Updater) *Tween {
+func New(duration time.Duration, transition TransitionFunc, updaters ...Updater) *Tween {
 	return &Tween{
 		Duration:   duration,
 		Transition: transition,
-		Updater:    updater,
+		updaters:   updaters,
 		Framerate:  60,
 	}
 }
@@ -83,16 +86,33 @@ func (e *Tween) Complete() bool {
 	return e.complete
 }
 
+// Updaters is a getter for Tween.updaters, a list of callback interfaces.
+func (e *Tween) Updaters() []Updater {
+	e.ulock.Lock()
+	defer e.ulock.Unlock()
+	return e.updaters
+}
+
+// SetUpdaters is a setter for Tween.updaters, a list of callback interfaces.
+func (e *Tween) SetUpdaters(updaters ...Updater) {
+	e.ulock.Lock()
+	e.updaters = updaters
+	e.ulock.Unlock()
+}
+
 // Play causes the tween to be played forwards from the beginning.
 func (e *Tween) Play() {
 	e.Pause()
-	e.Seek(0)
 
 	// Based on fps we can calculate how long a frame is:
 	frameDuration := time.Second / time.Duration(e.Framerate) // The duration in a frame
 	frames := int(e.Duration / frameDuration)                 // The number of frames in the duration
 
-	e.Updater.Start(e.Framerate, frames, frameDuration, e.Duration)
+	e.ulock.Lock()
+	for _, u := range e.updaters {
+		go u.Start(e.Framerate, frames, frameDuration, e.Duration)
+	}
+	e.ulock.Unlock()
 
 	// Initializing values for "forward" playback
 	e.reversed = false
@@ -103,7 +123,11 @@ func (e *Tween) Play() {
 
 	// Send initial frame
 	frame := Frame{}
-	e.Updater.Update(frame)
+	e.ulock.Lock()
+	for _, u := range e.updaters {
+		go u.Update(frame)
+	}
+	e.ulock.Unlock()
 
 	e.Resume()
 }
@@ -111,13 +135,16 @@ func (e *Tween) Play() {
 // PlayReverse causes the tween to be played backwards from the end.
 func (e *Tween) PlayReverse() {
 	e.Pause()
-	e.Seek(e.Duration)
 
 	// Based on fps we can calculate how long a frame is:
 	frameDuration := time.Second / time.Duration(e.Framerate) // The duration in a frame
 	frames := int(e.Duration / frameDuration)                 // The number of frames in the duration
 
-	e.Updater.Start(e.Framerate, frames, frameDuration, e.Duration)
+	e.ulock.Lock()
+	for _, u := range e.updaters {
+		go u.Start(e.Framerate, frames, frameDuration, e.Duration)
+	}
+	e.ulock.Unlock()
 
 	// Initializing values for reversed playback
 	e.reversed = true
@@ -128,7 +155,11 @@ func (e *Tween) PlayReverse() {
 
 	// Send initial frame
 	frame := Frame{1, 1, frames, e.Duration}
-	e.Updater.Update(frame)
+	e.ulock.Lock()
+	for _, u := range e.updaters {
+		go u.Update(frame)
+	}
+	e.ulock.Unlock()
 
 	e.Resume()
 }
@@ -173,6 +204,8 @@ func (e *Tween) Resume() {
 
 	// Threading the Tweens playback to not stop other operations.
 	go func() {
+		e.plock.Add(1)
+
 		// Based on fps we can calculate how long a frame is:
 		frameDuration := time.Second / time.Duration(e.Framerate) // The duration in a frame
 		cutoff := e.Duration - frameDuration                      // The cutoff point where elapsed time is considered "stop"
@@ -210,7 +243,11 @@ func (e *Tween) Resume() {
 				frame.Transitioned = e.Transition(frame.Completed)
 
 				// Update the value
-				e.Updater.Update(frame)
+				e.ulock.Lock()
+				for _, u := range e.updaters {
+					go u.Update(frame)
+				}
+				e.ulock.Unlock()
 
 				// see if we should keep going
 				if frame.Elapsed > cutoff || frame.Elapsed < frameDuration {
@@ -243,9 +280,16 @@ func (e *Tween) Resume() {
 				frame.Transitioned = 0
 				frame.Index = 0
 			}
-			e.Updater.Update(frame)
-			e.Updater.End()
+
+			e.ulock.Lock()
+			for _, u := range e.updaters {
+				go u.Update(frame)
+				go u.End()
+			}
+			e.ulock.Unlock()
 		}
+
+		e.plock.Done()
 	}()
 }
 
@@ -254,8 +298,7 @@ func (e *Tween) Pause() {
 	if e.running == true {
 		close(e.pause)
 		// Ensuring the tween has truly paused before continuation
-		for e.running {
-		}
+		e.plock.Wait()
 	}
 }
 
@@ -264,7 +307,6 @@ func (e *Tween) Stop() {
 	if e.running == true {
 		close(e.stop)
 		// Ensuring the tween has truly stopped before continuation
-		for e.running {
-		}
+		e.plock.Wait()
 	}
 }
