@@ -1,4 +1,4 @@
-// Package curves adds standard transition curve implementations for
+// Package easing adds standard transition curve implementations for
 // the most commonly used tweens.
 package easing
 
