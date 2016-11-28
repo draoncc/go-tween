@@ -1,7 +1,9 @@
 package tween
 
-import "time"
-import "sync"
+import (
+	"sync"
+	"time"
+)
 
 // TransitionFunc calculates the percentage of the transition between the start
 // and end values based tween (elapsed time) completion status.
@@ -13,7 +15,7 @@ import "sync"
 type TransitionFunc func(completed float64) float64
 
 // Updater is the interface for updating the current value(s) as it tweens
-// between start and end values of a Tween.
+// between start and end values of a Engine.
 type Updater interface {
 	// Start signals the beginning of a tween and is sent before the
 	// tweening begins. Start may be used to setup or pre-calculate updates.
@@ -24,7 +26,7 @@ type Updater interface {
 	// runningTime is the total duration for the entire tween
 	Start(framerate, frames int, frameTime, runningTime time.Duration)
 
-	// Update receives information about the current Tween Frame and should
+	// Update receives information about the current Engine Frame and should
 	// be used to update output or state.
 	Update(Frame Frame)
 
@@ -41,8 +43,8 @@ type Frame struct {
 	Elapsed      time.Duration // Elapsed is the current elapsed time in the tween.
 }
 
-// Tween runs a tween relying on transitioner and updaters.
-type Tween struct {
+// Engine runs a tween relying on transitioner and updaters.
+type Engine struct {
 	Duration   time.Duration  // The total duration of the tween.
 	Transition TransitionFunc // Transition calculates the transition curve for the tween.
 	Framerate  int            // The number of tween data points per second (defaults to 60 fps - like the real gamers use).
@@ -59,8 +61,8 @@ type Tween struct {
 }
 
 // New creates a basic tween with a framerate of 60fps.
-func New(duration time.Duration, transition TransitionFunc, updaters ...Updater) *Tween {
-	return &Tween{
+func New(duration time.Duration, transition TransitionFunc, updaters ...Updater) *Engine {
+	return &Engine{
 		Duration:   duration,
 		Transition: transition,
 		updaters:   updaters,
@@ -68,40 +70,45 @@ func New(duration time.Duration, transition TransitionFunc, updaters ...Updater)
 	}
 }
 
-// Reversed is a getter for Tween.reversed, indicating whether or not this tween
+// Legacy for backwards compatability
+func NewEngine(duration time.Duration, transition TransitionFunc, updaters ...Updater) *Engine {
+	return New(duration, transition, updaters...)
+}
+
+// Reversed is a getter for Engine.reversed, indicating whether or not this tween
 // is playing backwards.
-func (e *Tween) Reversed() bool {
+func (e *Engine) Reversed() bool {
 	return e.reversed
 }
 
-// Running is a getter for Tween.running, indicating whether the tween is
+// Running is a getter for Engine.running, indicating whether the tween is
 // currently playing.
-func (e *Tween) Running() bool {
+func (e *Engine) Running() bool {
 	return e.running
 }
 
-// Complete is a getter for Tween.complete, indicating if the tween has
+// Complete is a getter for Engine.complete, indicating if the tween has
 // completed playback.
-func (e *Tween) Complete() bool {
+func (e *Engine) Complete() bool {
 	return e.complete
 }
 
-// Updaters is a getter for Tween.updaters, a list of callback interfaces.
-func (e *Tween) Updaters() []Updater {
+// Updaters is a getter for Engine.updaters, a list of callback interfaces.
+func (e *Engine) Updaters() []Updater {
 	e.ulock.Lock()
 	defer e.ulock.Unlock()
 	return e.updaters
 }
 
-// SetUpdaters is a setter for Tween.updaters, a list of callback interfaces.
-func (e *Tween) SetUpdaters(updaters ...Updater) {
+// SetUpdaters is a setter for Engine.updaters, a list of callback interfaces.
+func (e *Engine) SetUpdaters(updaters ...Updater) {
 	e.ulock.Lock()
 	e.updaters = updaters
 	e.ulock.Unlock()
 }
 
-// Play causes the tween to be played forwards from the beginning.
-func (e *Tween) Play() {
+// Start causes the tween to be played forwards from the beginning.
+func (e *Engine) Start() {
 	e.Pause()
 
 	// Based on fps we can calculate how long a frame is:
@@ -132,8 +139,8 @@ func (e *Tween) Play() {
 	e.Resume()
 }
 
-// PlayReverse causes the tween to be played backwards from the end.
-func (e *Tween) PlayReverse() {
+// StartReverse causes the tween to be played backwards from the end.
+func (e *Engine) StartReverse() {
 	e.Pause()
 
 	// Based on fps we can calculate how long a frame is:
@@ -165,7 +172,7 @@ func (e *Tween) PlayReverse() {
 }
 
 // Reverse reverses the tweens direction without affecting its playback.
-func (e *Tween) Reverse() {
+func (e *Engine) Reverse() {
 	// Ensuring that playback will not be affected
 	if e.running == true {
 		e.Pause()
@@ -178,7 +185,7 @@ func (e *Tween) Reverse() {
 // Seek sets the playhead without affecting its playback.
 // If the position exceeds the total tween duration, the tween's duration is
 // taken instead.
-func (e *Tween) Seek(position time.Duration) {
+func (e *Engine) Seek(position time.Duration) {
 	// Ensuring that playback will not be affected
 	if e.running == true {
 		e.Pause()
@@ -194,7 +201,7 @@ func (e *Tween) Seek(position time.Duration) {
 }
 
 // Resume resumes the tweens playback without affecting the direction.
-func (e *Tween) Resume() {
+func (e *Engine) Resume() {
 	if e.running || e.complete {
 		return
 	}
@@ -202,7 +209,7 @@ func (e *Tween) Resume() {
 	e.running = true
 	e.pause = make(chan int)
 
-	// Threading the Tweens playback to not stop other operations.
+	// Threading the Engines playback to not stop other operations.
 	go func() {
 		e.plock.Add(1)
 
@@ -294,7 +301,7 @@ func (e *Tween) Resume() {
 }
 
 // Pause pauses the tween in place.
-func (e *Tween) Pause() {
+func (e *Engine) Pause() {
 	if e.running == true {
 		close(e.pause)
 		// Ensuring the tween has truly paused before continuation
@@ -303,7 +310,7 @@ func (e *Tween) Pause() {
 }
 
 // Stop terminates the tween immediately.
-func (e *Tween) Stop() {
+func (e *Engine) Stop() {
 	if e.running == true {
 		close(e.stop)
 		// Ensuring the tween has truly stopped before continuation
